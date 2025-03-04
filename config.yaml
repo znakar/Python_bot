@@ -1,0 +1,8 @@
+---
+  bot:
+    token: "BOT_TOKEN"
+  modules:
+    - os
+    - dotenv
+    - help
+    - keyboard
