@@ -1,70 +1,109 @@
 import os
-from dotenv import load_dotenv
-import telebot
+import sqlite3 as sq
+import asyncio
+import logging
+
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from SQLite import init_db, save_photo
+from aiogram import Bot, Dispatcher, types
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, CallbackQuery
 from help import commands
 from keyboard_markup import markup
-import sqlite3 as sq
+from aiogram import F
+from dotenv import load_dotenv
+
+# Логирование
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv('BOT_TOKEN.env')
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
+
+
 
 if BOT_TOKEN is None:
     print('BOT_TOKEN environment variable not set')
 else:
     print('BOT_TOKEN environment variable is set')
 
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+dp = Dispatcher()
 
 
 
-@bot.message_handler(commands=['start', 'hello'])
-def send_welcome(message):
-    bot.reply_to(message, "Greetings, there is a buttons you can choose", reply_markup=markup)
+
+# Определение состояний FSM
+class PhotoStates(StatesGroup):
+    waiting_for_photo_name = State() # Состояние ожидания имени фото
+
+# Обработчик команды /start и /hello
+@dp.message(CommandStart())
+@dp.message(Command("hello"))
+async def send_welcome(message: Message):
+    await message.answer( "Greetings, there is a buttons you can choose", reply_markup=markup)
+
+# Обработчик команды /image
+@dp.message(Command("image"))
+async def send_image(message: Message):
+    await message.answer("Send me your photo", reply_markup=markup)
 
 
-@bot.message_handler(commands=['image'])
-def send_image(message):
-    bot.reply_to(message, "Send me your photo", reply_markup=markup)
-
-    bot.register_next_step_handler(message, handle_photo)
-
-@bot.message_handler(content_types=['photo'])
-def handle_photo(message):
+# Обработчик для получения фото
+@dp.message(F.photo)
+async def handle_photo(message: Message, state: FSMContext):
     file_id = message.photo[-1].file_id  # Получаем ID самого большого фото
     weight = message.photo[-1].file_size # Вес изображения
     format = "JPEG" # Предполагаем формат JPEG
 
 
+# Сохраняем данные в FSM
+    await state.update_data(file_id=file_id, weight=weight, format=format)
+
 
     # Запрашиваем имя изображения у пользователя
-    bot.reply_to(message, "Please, name your picture")  # Отправляем пользователю подтверждение
+    await message.answer ("Please, name your picture")  # Отправляем пользователю подтверждение
 
-    # Регистрируем следующий шаг для получения имени
-    bot.register_next_step_handler(message, save_photo, file_id, weight, format)
+    # Переключаемся в состояние ожидания имени
+    await state.set_state(PhotoStates.waiting_for_photo_name)
 
-def save_photo(message, file_id, weight, format):
-    name = message.text # Получаем имя от пользователя
+@dp.message(PhotoStates.waiting_for_photo_name)
+async def save_photo_handler(message: Message, state: FSMContext):
+    name = message.text
 
-    with sq.connect('my_database.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO images (file_id, name, weight, format) VALUES (?, ?, ?, ?)",
-                       (file_id, name, weight, format))
-        conn.commit()
+    # Получаем данные из FSM
+    data = await state.get_data()
+    file_id = data['file_id']
+    weight = data['weight']
+    format = data['format']
 
-    bot.reply_to(message, f"Photo '{name}' saved in database!")
+    # Сохраняем данные в базу данных
+    save_photo(file_id, name, weight, format)
 
-@bot.message_handler(commands=['help'])
-def send_help(message):
+    await message.answer(f"Photo '{name}' saved in database!")
+
+
+    await state.clear()
+
+@dp.message(Command("help"))
+async def send_help(message):
     full_message = "What do you want to do?\n\n" + commands # оператор + конкатениреует(объединяет) две строки в одну \n - символ новый строки. Используется для переноса текста на следующую строку
 
-    bot.reply_to(message, full_message, reply_markup=markup)
+    await message.answer(full_message, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def handle_query(call):
-    if call.data == 'whatever':
-        bot.answer_callback_query(call.id, "You pressed the \"Back button\" NOO!")
+@dp.callback_query(F.data == "whatever")
+async def handle_query(callback: CallbackQuery):
+        await callback.answer("You pressed the \"Back button\" NOO!")
 
-bot.infinity_polling()
+
+async def main():
+    init_db()
+    await dp.start_polling(bot)
+
+if __name__ == '__main__':
+    asyncio.run(main())
 
