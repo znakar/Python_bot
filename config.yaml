@@ -1,8 +1,23 @@
 ---
   bot:
-    token: "BOT_TOKEN"
+    token: "BOT_TOKEN.env"
+    name: "ANP"
+    admin:
+    - @KotanyReal
   modules:
     - os
     - dotenv
     - help
     - keyboard
+    - logging
+    - asyncio
+    - sqlite3
+
+  commands:
+    start: "Start conversation with the bot"
+    help: "List of available commands"
+    hello: "Say hello to the bot"
+    image: "Send a photo and name it. It will be saved in the database"
+
+  logging:
+      level: "INFO"

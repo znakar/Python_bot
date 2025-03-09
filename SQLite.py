@@ -6,6 +6,7 @@ def init_db():
         cur = conn.cursor()
         cur.execute("DROP TABLE IF EXISTS images")
         cur.execute("""CREATE TABLE IF NOT EXISTS images (
+            owner TEXT,
             file_id TEXT PRIMARY KEY,
             name TEXT,
             weight INTEGER,

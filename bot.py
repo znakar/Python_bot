@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
-logging.warning('Code is working...')
+logging.warning('Bot is working...')
 
 load_dotenv('BOT_TOKEN.env')
 
@@ -45,7 +45,7 @@ class PhotoStates(StatesGroup):
 @dp.message(CommandStart())
 @dp.message(Command("hello"))
 async def send_welcome(message: Message):
-    await message.answer( "Greetings, there is a buttons you can choose", reply_markup=markup)
+    await message.answer( "Greetings👋, there is a buttons you can choose", reply_markup=markup)
 
 # Обработчик команды /image
 @dp.message(Command("image"))
@@ -91,7 +91,7 @@ async def save_photo_handler(message: Message, state: FSMContext):
 
 @dp.message(Command("help"))
 async def send_help(message):
-    full_message = "What do you want to do?\n\n" + commands # оператор + конкатениреует(объединяет) две строки в одну \n - символ новый строки. Используется для переноса текста на следующую строку
+    full_message = "What do you want to do?🤔\n\n" + commands # оператор + конкатениреует(объединяет) две строки в одну \n - символ новый строки. Используется для переноса текста на следующую строку
 
     await message.answer(full_message, reply_markup=markup)
 
