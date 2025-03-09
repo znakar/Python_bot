@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
+logging.warning('Code is working...')
 
 load_dotenv('BOT_TOKEN.env')
 
